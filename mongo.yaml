@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  labels: # (we can give any K8s component a label, labels are key-value pairs that are attached to K8s resources, identifier, which should be meaningful and relvant to users)
+    app: mongo # At deployemnt level it is optional, but it is a good practice to give a label to the deployment, and it will help us to identify the deployment in the future. you can choose any key-value pair but it is good to use app as key and the name of the application as value, in this case mongo)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo # will idenetify the pods that belong to this deployment
+  template: # (Configuration for the pods has its own metadata and spec sections)
+    metadata:
+      labels:
+        app: mongo # unique identifier for the pods that belong to this deployment, it is required fild, and it must match the selector field in the deployment spec
+    spec:
+      containers: 
+      - name: mongo
+        image: mongo:latest # which image to use for the container
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME # MongoDB expected key name
+        - valueFrom:
+            secretKeyRef:
+              name: mongo-secret # file name of the secret that we created in the previous step
+              key: mongo-user # key name of the secret that we created in the previous step
+
+        - name: MONGO_INITDB_ROOT_PASSWORD # MongoDB expected key name
+        - valueFrom:
+            secretKeyRef:
+              name: mongo-secret # file name of the secret that we created in the previous step
+              key: mongo-password # key name of the secret that we created in the previous step
+        volumeMounts:
+        - name: mongo-data
+          mountPath: /data/db
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+spec:
+  selector:
+    app: mongo # will identify the pods that belong to this service
+  ports:
+  - port: 27017 # The port that the service will expose, and which port the traffic will be forwarded to on the pods
+    targetPort: 27017 # Which port to expose on the service, and which port to forward the traffic to on the pods
